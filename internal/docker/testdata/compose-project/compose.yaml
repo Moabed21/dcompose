@@ -1,0 +1,18 @@
+name: dcompose-it
+services:
+  ttyapp:
+    image: alpine:3.24
+    tty: true
+    command: sh -c 'i=0; while true; do i=$$((i+1)); echo "tty line $$i"; sleep 0.3; done'
+  noisy:
+    image: alpine:3.24
+    command: sh -c 'i=0; while true; do i=$$((i+1)); echo "out $$i"; echo "err $$i" >&2; sleep 0.3; done'
+  cache:
+    image: alpine:3.24
+    command: sleep infinity
+    volumes: [cachedata:/data]
+  built:
+    build: ./built
+    command: sleep infinity
+volumes:
+  cachedata:

@@ -1,0 +1,14 @@
+# Build output
+/dcompose
+/dcompose.exe
+/dist/
+
+# Logs exported from the Logs tab (E)
+dcompose-*.log
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
