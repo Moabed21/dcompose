@@ -1,23 +1,30 @@
 # dcompose
 
 A fast terminal UI for Docker and Docker Compose. Manage containers, compose
-projects, logs, stats, images, volumes and networks from one keyboard-driven
-screen. Works on Linux, macOS and Windows.
+projects, logs, stats, images, volumes, networks and disk space from one
+keyboard-driven screen. Works on Linux, macOS and Windows.
 
 ```
- ⬡ dcompose   1 Containers   2 Compose   3 Logs   4 Stats   5 Images   6 Volumes   7 Networks
+ ⬡ dcompose   1 Containers   2 Compose   3 Logs   4 Stats   5 Images   6 Volumes   7 Networks   8 Disk
 ```
 
 ## Features
 
-- **Containers**: start, stop, restart, pause, kill, remove, inspect, open a shell, follow logs.
+- **Containers**: start, stop, restart, pause, kill, remove, open a shell, follow logs.
+- **Container details**: a readable summary of state, exit code (with hints like "out of
+  memory"), restart count, health-check results, ports, networks, mounts, limits and
+  environment. It's the quickest way to see why a container is unhealthy or keeps restarting.
+- **Open in browser**: one key opens a container's published port in your browser.
 - **Compose projects**: `up`, `up --build`, `down` (optionally with volumes), build, pull,
   restart and so on, for a whole project or a single service. Projects stay listed after
-  `down`, so you can bring them back up later.
+  `down`, so you can bring them back up later. Edit a compose file in your editor; dcompose
+  checks it for errors as soon as you save and close.
 - **Live logs**: follows one container or a whole project, auto-reconnects when a container
   restarts, marks stderr lines, and supports filter, wrap, timestamps and export to a file.
 - **Stats**: CPU, memory, network and disk I/O for every running container, sortable.
 - **Images, volumes, networks**: browse, inspect, pull, remove and prune.
+- **Disk usage**: what images, containers, volumes and build cache take up, how much is
+  reclaimable, and the largest volumes. Prune any of them, including the build cache.
 - Long operations run in the background with live output (press `T`), so the UI never freezes.
 - Mouse support: click tabs and scroll with the wheel.
 
@@ -84,7 +91,7 @@ Press `?` at any time to see the keys for the current tab.
 
 | Key                     | Action                                  |
 |-------------------------|-----------------------------------------|
-| `1`–`7`, `tab`/`shift+tab` | switch tab (or click it)             |
+| `1`–`8`, `tab`/`shift+tab` | switch tab (or click it)             |
 | `↑↓` / `j k`, `pgup/pgdn`, `g/G` | move                           |
 | `/`                     | filter the current list (`esc` clears)  |
 | `R`                     | refresh now (auto-refresh every 3s)     |
@@ -97,8 +104,9 @@ Press `?` at any time to see the keys for the current tab.
 | Key   | Action                         | Key       | Action                 |
 |-------|--------------------------------|-----------|------------------------|
 | `s`   | start / unpause                | `e`       | open a shell (bash or sh) |
-| `S`   | stop                           | `i`       | inspect (JSON)         |
+| `S`   | stop                           | `i` / `I` | details / raw inspect JSON |
 | `r`   | restart                        | `l`/`enter` | follow logs          |
+| `w`   | open a published port in the browser | | |
 | `p`   | pause / unpause                | `a`       | all / running only (Containers) |
 | `K`   | kill (confirms)                | `P`       | prune stopped (Containers, confirms) |
 | `d`   | force remove (confirms)        | `o`       | cycle sort (Stats)     |
@@ -113,9 +121,13 @@ Press `?` at any time to see the keys for the current tab.
 | `r` / `p` | restart / pause                 | `c`   | show resolved compose config   |
 | `d` / `D` | `down` / `down --volumes`       | `o`   | add a project from a path      |
 | `esc`     | back to the project list        | `x`   | forget a project that is down  |
+| `E`       | edit the compose file, then validate it | |                          |
 
-In the services view, `d` removes the selected service's containers, and `e` `i` `l` `K` work
-on its container just like in the Containers tab.
+In the services view, `d` removes the selected service's containers, and `e` `i` `I` `w` `l`
+`K` work on its container just like in the Containers tab.
+
+`E` uses `$VISUAL` or `$EDITOR`, falling back to `nano`/`vim`/`vi` (Notepad on Windows). For a
+graphical editor, make it wait until the file is closed, for example `EDITOR="code --wait"`.
 
 **Logs**: `[` `]` or `←` `→` switch source · `f` follow · `w` wrap · `t` timestamps ·
 `/` filter · `c` clear · `r` reconnect · `E` export to `./dcompose-<name>-<time>.log`
@@ -126,6 +138,9 @@ on its container just like in the Containers tab.
 **Volumes**: `d` remove · `P` prune anonymous · `A` prune all unused · `i` inspect
 
 **Networks**: `d` remove · `P` prune unused · `i` inspect
+
+**Disk**: `↑↓` select a row · `P` prune it (dangling images, stopped containers, anonymous
+volumes, dangling build cache) · `A` prune all unused images, volumes or build cache · `R` recalculate
 
 Every destructive action asks for confirmation first.
 

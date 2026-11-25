@@ -256,6 +256,6 @@ func (m StatsModel) View() string {
 	}
 
 	body := renderTable(cols, rows, &m.list, m.width, m.height-2)
-	help := helpLine(m.width, "o sort · s start · S stop · r restart · p pause · K kill · d rm · e shell · i inspect · l logs · / filter")
+	help := helpLine(m.width, "o sort · s start · S stop · r restart · p pause · K kill · d rm · e shell · i details · w browser · l logs · / filter")
 	return title + "\n" + body + "\n" + help
 }

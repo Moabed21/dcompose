@@ -210,6 +210,7 @@ func summaryToInfo(ctr container.Summary) ContainerInfo {
 		Status:    ctr.Status,
 		State:     string(ctr.State),
 		Ports:     formatPorts(ctr.Ports),
+		Published: publishedPorts(ctr.Ports),
 		CreatedAt: time.Unix(ctr.Created, 0),
 		Health:    health,
 		Volumes:   vols,

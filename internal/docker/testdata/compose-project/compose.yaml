@@ -11,6 +11,12 @@ services:
     image: alpine:3.24
     command: sleep infinity
     volumes: [cachedata:/data]
+    # Random free port on loopback, so it never clashes with anything.
+    ports: ["127.0.0.1::6379"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 1s
+      start_period: 0s
   built:
     build: ./built
     command: sleep infinity

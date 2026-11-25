@@ -123,6 +123,23 @@ func ComposeConfig(ctx context.Context, p ComposeProject) (string, error) {
 	return string(out), err
 }
 
+// ExistingConfigFiles returns the project's compose files that exist on disk.
+func (p ComposeProject) ExistingConfigFiles() []string {
+	var out []string
+	for _, f := range p.ConfigFiles {
+		if fileExists(f) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// ValidateCompose checks that the project's compose files parse and resolve.
+func ValidateCompose(ctx context.Context, p ComposeProject) error {
+	_, err := RunDocker(ctx, ComposeArgs(p, "config", "--quiet")...)
+	return err
+}
+
 // ResolveComposeFile turns a path (file or directory) into a ComposeProject
 // by asking compose for the project name.
 func ResolveComposeFile(ctx context.Context, path string) (ComposeProject, error) {

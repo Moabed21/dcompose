@@ -259,6 +259,12 @@ func projectOp(p docker.ComposeProject, k, svc string, paused bool) (tea.Cmd, bo
 		}, true
 	case "L":
 		return emit(SwitchToProjectLogsMsg{Project: p.Name}), true
+	case "E":
+		if !p.HasConfig() {
+			return emit(FlashMsg{Text: "edit " + p.Name, Err: fmt.Errorf("compose file not found on disk (%s); use 'o' to point to it",
+				strings.Join(p.ConfigFiles, ", "))}), true
+		}
+		return emit(EditComposeMsg{Project: p}), true
 	}
 	return nil, false
 }
@@ -329,7 +335,7 @@ func (m ComposeModel) updateDrilled(msg tea.KeyMsg) (ComposeModel, tea.Cmd) {
 		m.services = nil
 		m.rows = nil
 		return m, nil
-	case "c", "L":
+	case "c", "L", "E":
 		cmd, _ := projectOp(m.proj, k, "", false)
 		return m, cmd
 	}
@@ -358,7 +364,7 @@ func (m ComposeModel) updateDrilled(msg tea.KeyMsg) (ComposeModel, tea.Cmd) {
 			cmd, _ := projectOp(m.proj, "u", svc, false)
 			return m, cmd
 		}
-	case "K", "e", "i", "l", "enter":
+	case "K", "e", "i", "I", "w", "l", "enter":
 		if ctr == nil {
 			return m, emit(FlashMsg{Text: k + " " + svc, Err: fmt.Errorf("service %q has no container yet (press u to create it)", svc)})
 		}
@@ -407,7 +413,7 @@ func projectStatusCell(p docker.ComposeProject) string {
 
 func (m ComposeModel) viewProjectList() string {
 	title := titleLine(fmt.Sprintf("Compose Projects (%d)", len(m.projects)), m.filter.view(), m.width)
-	help := helpLine(m.width, "enter open · u up · U up+build · s/S start/stop · r restart · p pause · d down · D down+vols · b build · P pull · L logs · c config · o add · x forget")
+	help := helpLine(m.width, "enter open · u up · U up+build · s/S start/stop · r restart · p pause · d down · D down+vols · b build · P pull · L logs · c config · E edit · o add · x forget")
 
 	if len(m.visible) == 0 {
 		msg := "\n  No compose projects found.\n\n" +
@@ -447,7 +453,7 @@ func (m ComposeModel) viewDrilled() string {
 	run, tot := m.projectCounts(p.Name)
 	title := titleLine("← "+p.Name, projectStatusCell(p)+styles.DimStyle.Render(fmt.Sprintf("  %d/%d running", run, tot)), m.width)
 	sub := styles.DimStyle.Render("    " + truncate(strings.Join(p.ConfigFiles, ", "), m.width-6))
-	help := helpLine(m.width, "esc back · u up · U up+build · s start · S stop · r restart · p pause · d rm · b build · P pull · e shell · i inspect · l logs · L all logs · K kill")
+	help := helpLine(m.width, "esc back · u up · U up+build · s start · S stop · r restart · p pause · d rm · b build · P pull · e shell · i details · w browser · l logs · L all logs · E edit · K kill")
 
 	if len(m.rows) == 0 {
 		msg := "\n  No containers or services for this project."

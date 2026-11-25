@@ -14,6 +14,7 @@ type ContainerInfo struct {
 	Status    string // e.g. "Up 2 hours", "Exited (0) 5 minutes ago"
 	State     string // running, exited, restarting, paused, created, dead
 	Ports     string
+	Published []PortMapping // ports published on the host
 	CreatedAt time.Time
 	Health    string   // healthy, unhealthy, starting, ""
 	Volumes   []string // named volumes mounted

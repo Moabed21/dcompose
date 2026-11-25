@@ -229,7 +229,7 @@ func helpText(tab Tab) string {
 
 	global := []string{
 		h("Global"),
-		row("1-7 / tab / shift+tab", "switch tab (or click a tab)"),
+		row("1-8 / tab / shift+tab", "switch tab (or click a tab)"),
 		row("R / ctrl+r", "refresh now (auto-refresh every 3s)"),
 		row("T", "show output of the current/last background task"),
 		row("?", "toggle this help"),
@@ -249,7 +249,9 @@ func helpText(tab Tab) string {
 		row("K", "kill (SIGKILL) — confirms"),
 		row("d", "force remove — confirms"),
 		row("e", "open a shell (bash, falls back to sh)"),
-		row("i", "inspect (JSON)"),
+		row("i", "details: state, health checks, ports, mounts, env"),
+		row("I", "raw inspect JSON"),
+		row("w", "open a published port in the browser"),
 		row("l / enter", "follow logs"),
 	}
 
@@ -271,6 +273,7 @@ func helpText(tab Tab) string {
 			row("P", "pull images"),
 			row("L", "follow aggregated project logs"),
 			row("c", "show resolved compose config"),
+			row("E", "edit the compose file in $EDITOR (validated afterwards)"),
 			row("o", "add a project from a compose file or directory"),
 			row("x", "forget a project that is down"),
 			"",
@@ -280,8 +283,9 @@ func helpText(tab Tab) string {
 			row("s / S / r / p", "start / stop / restart / pause service"),
 			row("b / B / P", "build / build --no-cache / pull service"),
 			row("d", "remove service containers — confirms"),
-			row("e / i / l / K", "shell / inspect / logs / kill container"),
-			row("L / c", "project logs / compose config"),
+			row("e / i / I", "shell / details / raw JSON of the container"),
+			row("w / l / K", "open in browser / logs / kill container"),
+			row("L / c / E", "project logs / compose config / edit compose file"),
 			"",
 			styles.DimStyle.Render("  Compose operations run in the background; live output appears in the"),
 			styles.DimStyle.Render("  task panel. Press T for full output. Failures open it automatically."),
@@ -329,6 +333,16 @@ func helpText(tab Tab) string {
 			row("d", "remove — confirms"),
 			row("P", "prune unused networks — confirms"),
 			row("i / enter", "inspect"),
+		}
+	case TabDisk:
+		tabHelp = []string{
+			h("Disk"),
+			row("↑↓", "select images / containers / volumes / build cache"),
+			row("P", "prune the selected kind (dangling / stopped / anonymous) — confirms"),
+			row("A", "prune ALL unused images, volumes or build cache — confirms"),
+			row("R", "recalculate"),
+			"",
+			styles.DimStyle.Render("  Same numbers as `docker system df`. Largest volumes are listed below the table."),
 		}
 	}
 	return strings.Join(append(global, tabHelp...), "\n")

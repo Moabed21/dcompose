@@ -131,6 +131,6 @@ func (m ContainersModel) View() string {
 		body = renderTable(cols, rows, &m.list, m.width, m.tableHeight())
 	}
 
-	help := helpLine(m.width, "s start · S stop · r restart · p pause · K kill · d rm · e shell · i inspect · l logs · a all/running · P prune · / filter")
+	help := helpLine(m.width, "s start · S stop · r restart · p pause · K kill · d rm · e shell · i details · w browser · l logs · a all/running · P prune · / filter")
 	return title + "\n" + body + "\n" + help
 }

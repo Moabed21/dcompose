@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"dcompose/internal/desktop"
 	"dcompose/internal/docker"
 	"dcompose/internal/tui/styles"
 	"dcompose/internal/tui/views"
@@ -29,6 +30,7 @@ const (
 	TabImages
 	TabVolumes
 	TabNetworks
+	TabDisk
 	numTabs
 )
 
@@ -41,6 +43,7 @@ var tabNames = [][]string{
 	{"Images", "Imgs"},
 	{"Volumes", "Vols"},
 	{"Networks", "Nets"},
+	{"Disk", "Disk"},
 }
 
 const (
@@ -63,6 +66,7 @@ type Model struct {
 	imagesView     views.ImagesModel
 	volumesView    views.VolumesModel
 	networkView    views.NetworkModel
+	diskView       views.DiskModel
 
 	activeTab Tab
 	width     int
@@ -119,6 +123,7 @@ func NewModel(client *docker.Client, store *docker.ProjectStore) Model {
 		imagesView:     views.NewImagesModel(client),
 		volumesView:    views.NewVolumesModel(client),
 		networkView:    views.NewNetworkModel(client),
+		diskView:       views.NewDiskModel(client),
 		viewer:         viewportState{vp: newViewport()},
 		pending:        map[string]string{},
 	}
@@ -136,6 +141,11 @@ type dataMsg struct {
 	networks   []docker.NetworkInfo
 	fatal      error // containers could not be listed (daemon down)
 	errs       []error
+}
+
+type editDoneMsg struct {
+	project docker.ComposeProject
+	err     error
 }
 
 type projectAddedMsg struct {
@@ -196,6 +206,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.composeView, cmd = m.composeView.Update(msg)
 		return m, cmd
 
+	case views.DiskUsageMsg:
+		m.diskView, _ = m.diskView.Update(msg)
+		return m, nil
+
 	case TaskLinesMsg:
 		rc := m.handleTaskLines(msg)
 		return m, rc
@@ -208,6 +222,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.setFlash(msg.Text, msg.Err)
 		rc := m.forceRefresh()
+		if m.activeTab == TabDisk {
+			rc = tea.Batch(rc, m.diskView.Fetch())
+		}
 		return m, rc
 
 	case views.OpRequestMsg:
@@ -252,6 +269,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case views.ExecShellMsg:
 		return m, execShell(msg)
+
+	case views.EditComposeMsg:
+		return m, editCompose(msg.Project)
+
+	case editDoneMsg:
+		if msg.err != nil {
+			m.setFlash("edit compose file", msg.err)
+			return m, nil
+		}
+		m.setFlash("checking "+msg.project.Name+" compose file…", nil)
+		return m, validateCompose(msg.project)
 
 	case views.SwitchToLogsMsg:
 		cmd := m.setTab(TabLogs, false)
@@ -420,6 +448,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Refresh):
 		m.setFlash("refreshing…", nil)
 		rc := m.forceRefresh()
+		if m.activeTab == TabDisk {
+			rc = tea.Batch(rc, m.diskView.Fetch())
+		}
 		return m, rc
 	case key.Matches(msg, m.keys.Tasks):
 		if m.currentOrLastTask() == nil {
@@ -528,6 +559,8 @@ func (m *Model) setTab(t Tab, activateLogs bool) tea.Cmd {
 		}
 	case TabStats:
 		cmds = append(cmds, m.statsView.FetchStats())
+	case TabDisk:
+		cmds = append(cmds, m.diskView.Fetch())
 	}
 	return tea.Batch(cmds...)
 }
@@ -548,6 +581,8 @@ func (m *Model) activeCapturing() bool {
 		return m.volumesView.Capturing()
 	case TabNetworks:
 		return m.networkView.Capturing()
+	case TabDisk:
+		return m.diskView.Capturing()
 	}
 	return false
 }
@@ -569,6 +604,8 @@ func (m *Model) updateActive(msg tea.Msg) tea.Cmd {
 		m.volumesView, cmd = m.volumesView.Update(msg)
 	case TabNetworks:
 		m.networkView, cmd = m.networkView.Update(msg)
+	case TabDisk:
+		m.diskView, cmd = m.diskView.Update(msg)
 	}
 	return cmd
 }
@@ -840,6 +877,35 @@ func execShell(msg views.ExecShellMsg) tea.Cmd {
 	})
 }
 
+// editCompose suspends the TUI and opens the project's compose files in the
+// user's editor.
+func editCompose(p docker.ComposeProject) tea.Cmd {
+	files := p.ExistingConfigFiles()
+	c, err := desktop.EditorCommand(files...)
+	if err != nil {
+		return func() tea.Msg { return editDoneMsg{project: p, err: err} }
+	}
+	c.Dir = p.WorkingDir
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		if err != nil {
+			err = fmt.Errorf("editor %q: %w", c.Path, err)
+		}
+		return editDoneMsg{project: p, err: err}
+	})
+}
+
+// validateCompose checks the compose files after an edit.
+func validateCompose(p docker.ComposeProject) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := docker.ValidateCompose(ctx, p); err != nil {
+			return views.FlashMsg{Text: p.Name + " compose file has errors", Err: err}
+		}
+		return views.FlashMsg{Text: p.Name + " compose file is valid — press u to apply changes"}
+	}
+}
+
 // ------------------------------------------------------------- layout & view
 
 func (m *Model) dockHeight() int {
@@ -869,6 +935,7 @@ func (m *Model) layout() {
 	m.imagesView.SetSize(w, h)
 	m.volumesView.SetSize(w, h)
 	m.networkView.SetSize(w, h)
+	m.diskView.SetSize(w, h)
 
 	vw, vh := w-4, m.height-4-3 // overlay border+title+hint
 	if vw < 20 {
@@ -938,6 +1005,8 @@ func (m Model) activeView() string {
 		return m.volumesView.View()
 	case TabNetworks:
 		return m.networkView.View()
+	case TabDisk:
+		return m.diskView.View()
 	}
 	return ""
 }

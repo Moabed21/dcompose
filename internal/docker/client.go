@@ -15,8 +15,9 @@ import (
 
 // Client wraps the Docker SDK client.
 type Client struct {
-	cli    *client.Client
-	viaCLI bool // connections are tunnelled through `docker system dial-stdio`
+	cli         *client.Client
+	viaCLI      bool   // connections are tunnelled through `docker system dial-stdio`
+	browserHost string // where published ports are reachable
 }
 
 // NewClient creates a Docker client that talks to the same daemon as the
@@ -28,13 +29,16 @@ type Client struct {
 func NewClient() (*Client, error) {
 	opts := []client.Opt{client.FromEnv, client.WithAPIVersionNegotiation()}
 	viaCLI := false
+	daemonHost := ""
 
 	if host := os.Getenv(client.EnvOverrideHost); host != "" {
+		daemonHost = host
 		// With TLS verification on but no DOCKER_CERT_PATH, the CLI falls back
 		// to the certificates in ~/.docker, which the SDK does not do.
 		tlsWithoutCerts := os.Getenv(client.EnvTLSVerify) != "" && os.Getenv(client.EnvOverrideCertPath) == ""
 		viaCLI = !isDirectScheme(host) || tlsWithoutCerts
 	} else if ep, err := currentContextEndpoint(); err == nil && ep.Host != "" {
+		daemonHost = ep.Host
 		if ep.direct() {
 			opts = append(opts, client.WithHost(ep.Host))
 		} else {
@@ -49,7 +53,33 @@ func NewClient() (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
-	return &Client{cli: cli, viaCLI: viaCLI}, nil
+	return &Client{cli: cli, viaCLI: viaCLI, browserHost: hostOf(daemonHost)}, nil
+}
+
+// BrowserHost is the host name under which published container ports are
+// reachable: "localhost" for a local daemon (including Docker Desktop and
+// other VMs that forward ports), or the remote daemon's host name.
+func (c *Client) BrowserHost() string {
+	if c.browserHost == "" {
+		return "localhost"
+	}
+	return c.browserHost
+}
+
+// hostOf extracts the machine name from a daemon address such as
+// tcp://10.0.0.5:2376 or ssh://me@server:22. Local sockets give "localhost".
+func hostOf(daemon string) string {
+	u, err := url.Parse(daemon)
+	if err != nil {
+		return "localhost"
+	}
+	switch u.Scheme {
+	case "tcp", "ssh", "http", "https":
+		if h := u.Hostname(); h != "" {
+			return h
+		}
+	}
+	return "localhost"
 }
 
 // tunnelOpts route every connection through dialViaCLI. The placeholder

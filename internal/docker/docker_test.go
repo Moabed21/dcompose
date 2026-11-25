@@ -124,10 +124,62 @@ func TestIntegrationComposeLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := map[string]string{}
+	var cache ContainerInfo
 	for _, ct := range containers {
 		if ct.Project == proj.Name {
 			ids[ct.Service] = ct.ID
+			if ct.Service == "cache" {
+				cache = ct
+			}
 		}
+	}
+
+	// Published ports are listed for the browser action.
+	if len(cache.Published) != 1 || cache.Published[0].HostIP != "127.0.0.1" || cache.Published[0].HostPort == 0 {
+		t.Fatalf("cache published ports: %+v", cache.Published)
+	}
+
+	// Details: ports, mounts, health checks, compose labels, env.
+	det, err := c.ContainerDetails(ctx, cache.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if det.Service != "cache" || det.State != "running" || len(det.Env) == 0 {
+		t.Fatalf("details: %+v", det)
+	}
+	if len(det.Ports) != 1 || det.Ports[0].HostPort != cache.Published[0].HostPort || det.Ports[0].ContainerPort != 6379 {
+		t.Fatalf("details ports: %+v", det.Ports)
+	}
+	if len(det.Mounts) != 1 || det.Mounts[0].Source != proj.Name+"_cachedata" || det.Mounts[0].Destination != "/data" {
+		t.Fatalf("details mounts: %+v", det.Mounts)
+	}
+	if det.Health == "" || len(det.HealthLog) == 0 {
+		t.Fatalf("details health: %q %+v", det.Health, det.HealthLog)
+	}
+
+	// Disk usage includes the project's volume.
+	du, err := c.DiskUsage(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundVol := false
+	for _, v := range du.VolumeSizes {
+		foundVol = foundVol || v.Name == proj.Name+"_cachedata"
+	}
+	if !foundVol || du.Images.Total == 0 || du.Containers.Active == 0 {
+		t.Fatalf("disk usage: %+v", du)
+	}
+
+	// Compose validation: valid project passes, broken file fails.
+	if err := ValidateCompose(ctx, proj); err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	broken := filepath.Join(t.TempDir(), "compose.yaml")
+	if err := os.WriteFile(broken, []byte("services:\n  x:\n    image: [unclosed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateCompose(ctx, ComposeProject{Name: "broken", ConfigFiles: []string{broken}}); err == nil {
+		t.Fatal("expected a validation error for a broken compose file")
 	}
 
 	collect := func(s *LogStream, n int) []LogLine {

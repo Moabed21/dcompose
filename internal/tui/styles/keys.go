@@ -16,7 +16,7 @@ type KeyMap struct {
 
 // DefaultKeyMap returns the default global keybindings.
 func DefaultKeyMap() KeyMap {
-	tabs := make([]key.Binding, 7)
+	tabs := make([]key.Binding, 8)
 	for i := range tabs {
 		k := string(rune('1' + i))
 		tabs[i] = key.NewBinding(key.WithKeys(k), key.WithHelp(k, "tab"))

@@ -18,7 +18,7 @@ func TestHeaderTabRangesMatchRender(t *testing.T) {
 		ranges := m.tabRanges()
 		for i, r := range ranges {
 			if r[1] > len(line) {
-				if w >= 52 {
+				if w >= 59 {
 					t.Fatalf("width %d: tab %d does not fit: %q", w, i+1, string(line))
 				}
 				continue

@@ -77,6 +77,12 @@ type ForgetProjectMsg struct {
 	Project string
 }
 
+// EditComposeMsg asks the root to open a project's compose files in an
+// editor (suspending the TUI) and validate them afterwards.
+type EditComposeMsg struct {
+	Project docker.ComposeProject
+}
+
 // AddProjectMsg asks the root to register a compose file/directory.
 type AddProjectMsg struct {
 	Path string
@@ -139,7 +145,7 @@ func InspectCmd(kind, ref, title string) tea.Cmd {
 func containerActions(client *docker.Client, k string, ctr *docker.ContainerInfo) (tea.Cmd, bool) {
 	if ctr == nil {
 		switch k {
-		case "s", "S", "r", "p", "K", "d", "e", "i", "l", "enter":
+		case "s", "S", "r", "p", "K", "d", "e", "i", "I", "w", "l", "enter":
 			return nil, true
 		}
 		return nil, false
@@ -174,7 +180,11 @@ func containerActions(client *docker.Client, k string, ctr *docker.ContainerInfo
 		}
 		return emit(ExecShellMsg{ContainerID: id, Name: name}), true
 	case "i":
+		return DetailsCmd(client, id, name), true
+	case "I":
 		return InspectCmd("container", id, name), true
+	case "w":
+		return openPortCmd(client, ctr), true
 	case "l", "enter":
 		return emit(SwitchToLogsMsg{ContainerID: id}), true
 	}
