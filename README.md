@@ -4,9 +4,7 @@ A fast terminal UI for Docker and Docker Compose. Manage containers, compose
 projects, logs, stats, images, volumes, networks and disk space from one
 keyboard-driven screen. Works on Linux, macOS and Windows.
 
-```
- ⬡ dcompose   1 Containers   2 Compose   3 Logs   4 Stats   5 Images   6 Volumes   7 Networks   8 Disk
-```
+![dcompose touring its tabs: containers, details, compose, logs, stats, images, volumes, networks and disk](docs/demo.gif)
 
 ## Features
 
@@ -27,6 +25,18 @@ keyboard-driven screen. Works on Linux, macOS and Windows.
   reclaimable, and the largest volumes. Prune any of them, including the build cache.
 - Long operations run in the background with live output (press `T`), so the UI never freezes.
 - Mouse support: click tabs and scroll with the wheel.
+
+## Screenshots
+
+| Containers | Container details |
+|---|---|
+| ![Container list with state, status, image, ports and project](docs/screenshots/01-containers.png) | ![Details view with image, limits, compose project, network and mounts](docs/screenshots/02-details.png) |
+| **Compose project services** | **Live project logs** |
+| ![Services of a compose project with their containers](docs/screenshots/04-services.png) | ![Aggregated logs of a whole compose project](docs/screenshots/05-logs.png) |
+| **Resource usage** | **Disk usage** |
+| ![CPU, memory, network and disk I/O per container](docs/screenshots/07-stats.png) | ![Disk usage by type with reclaimable space and largest volumes](docs/screenshots/11-disk.png) |
+
+More in [docs/screenshots](docs/screenshots).
 
 ## Requirements
 
